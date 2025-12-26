@@ -46,7 +46,7 @@ def handle_move():
     #create set of all obsticales
     all_obstacles = set()
     for snake in data["board"]["snakes"]:
-        for segment in snake["body"]:
+        for segment in snake["body"][:-1]:
             all_obstacles.add((segment["x"], segment["y"]))
 
     #collision check
@@ -60,7 +60,7 @@ def handle_move():
         possible_directions["up"] = -1
 
     #flood fill all sections
-    flood_mult = 2
+    flood_mult = 0.5
     if possible_directions["left"] != -1:
         left_node = {"x": my_head["x"] - 1, "y": my_head["y"]}
         left_flood = get_flood_fill_score(left_node, board_width, board_height, all_obstacles)
@@ -82,34 +82,59 @@ def handle_move():
         up_flood = get_flood_fill_score(up_node, board_width, board_height, all_obstacles)
         possible_directions["up"] += up_flood * flood_mult
 
+    #incentive to follow tail
+    my_tail = data["you"]["body"][-1]
+    if possible_directions["left"] != -1:
+        if my_head["x"] - 1 == my_tail["x"] and my_head["y"] == my_tail["y"]:
+            possible_directions["left"] += 25
+    if possible_directions["right"] != -1:
+        if my_head["x"] + 1 == my_tail["x"] and my_head["y"] == my_tail["y"]:
+            possible_directions["right"] += 25
+    if possible_directions["down"] != -1:    
+        if my_head["y"] - 1 == my_tail["y"] and my_head["x"] == my_tail["x"]:
+            possible_directions["down"] += 25
+    if possible_directions["up"] != -1:    
+        if my_head["y"] + 1 == my_tail["y"] and my_head["x"] == my_tail["x"]:
+            possible_directions["up"] += 25
+
+
     my_health = data["you"]["health"]
     if my_health < 10:
         print("health under 10")
-        low_health_mod = 25
+        low_health_mod = 50
     elif my_health < 25:
         print("health under 25")
-        low_health_mod = 5
+        low_health_mod = 10
     elif my_health < 50:
-        low_health_mod = 1
+        low_health_mod = 3
     elif my_health < 75:
-        low_health_mod = -1
+        low_health_mod = 2
     else:
-        low_health_mod = -2
+        low_health_mod = 1
     
+    #more incentive to go for food in the beginning
+    turn = data["turn"]
+    if turn < 40:
+        turn_mult = 20
+    elif turn < 100:
+        turn_mult = 10
+    else:
+        turn_mult = 2
+
     #food checker
     closest_food = find_closest_food(my_head, data["board"]["food"])
     if possible_directions["left"] != -1:
         if closest_food["x"] < my_head["x"]:
-            possible_directions["left"] += 1 * low_health_mod
+            possible_directions["left"] += 1 * low_health_mod * turn_mult
     if possible_directions["right"] != -1:
         if closest_food["x"] > my_head["x"]:
-            possible_directions["right"] += 1 * low_health_mod
+            possible_directions["right"] += 1 * low_health_mod * turn_mult
     if possible_directions["down"] != -1:
         if closest_food["y"] < my_head["y"]:
-            possible_directions["down"] += 1 * low_health_mod
+            possible_directions["down"] += 1 * low_health_mod * turn_mult
     if possible_directions["up"] != -1:
         if closest_food["y"] > my_head["y"]:
-            possible_directions["up"] += 1 * low_health_mod
+            possible_directions["up"] += 1 * low_health_mod * turn_mult
 
     #list of possible risky moves
     danger_zone = set()
@@ -118,6 +143,7 @@ def handle_move():
         if snake["id"] == my_id:
             continue
         head = snake["head"]
+        tail = snake["body"][-1]
         potential_moves = [
             (head["x"], head["y"] + 1),
             (head["x"], head["y"] - 1),
@@ -125,19 +151,33 @@ def handle_move():
             (head["x"] + 1, head["y"])
         ] 
         for move in potential_moves:
+            if move in data["board"]["food"]:
+                all_obstacles.update(tail)
             danger_zone.add(move)
     if possible_directions["left"] != -1:
         if (my_head["x"] - 1, my_head["y"]) in danger_zone:
-            possible_directions["left"] -= 50
+            if snake["length"] >= data["you"]["length"]:
+                possible_directions["left"] -= 100
+            else:
+                possible_directions["left"] += 100
     if possible_directions["right"] != -1:
         if (my_head["x"] + 1, my_head["y"]) in danger_zone:
-            possible_directions["right"] -= 50
+            if snake["length"] >= data["you"]["length"]:
+                possible_directions["right"] -= 100
+            else:
+                possible_directions["right"] += 100
     if possible_directions["down"] != -1:
         if (my_head["x"], my_head["y"] - 1) in danger_zone:
-            possible_directions["down"] -= 50
+            if snake["length"] >= data["you"]["length"]:
+                possible_directions["down"] -= 100
+            else:
+                possible_directions["down"] += 100
     if possible_directions["up"] != -1:
         if (my_head["x"], my_head["y"] + 1) in danger_zone:
-            possible_directions["up"] -= 50
+            if snake["length"] >= data["you"]["length"]:
+                possible_directions["up"] -= 100
+            else:
+                possible_directions["up"] += 100
 
     print(data["turn"])
     best_move = max(possible_directions, key=possible_directions.get)
