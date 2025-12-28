@@ -64,7 +64,6 @@ def handle_move():
     if possible_directions["left"] != -1:
         left_node = {"x": my_head["x"] - 1, "y": my_head["y"]}
         left_flood = get_flood_fill_score(left_node, board_width, board_height, all_obstacles)
-        print("left flood: " + str(left_flood))
         possible_directions["left"] += left_flood * flood_mult
 
     if possible_directions["right"] != -1:
@@ -97,13 +96,10 @@ def handle_move():
         if my_head["y"] + 1 == my_tail["y"] and my_head["x"] == my_tail["x"]:
             possible_directions["up"] += 25
 
-
     my_health = data["you"]["health"]
     if my_health < 10:
-        print("health under 10")
         low_health_mod = 50
     elif my_health < 25:
-        print("health under 25")
         low_health_mod = 10
     elif my_health < 50:
         low_health_mod = 3
@@ -137,47 +133,50 @@ def handle_move():
             possible_directions["up"] += 1 * low_health_mod * turn_mult
 
     #list of possible risky moves
-    danger_zone = set()
     my_id = data["you"]["id"]
+    my_length = data["you"]["length"]
     for snake in data["board"]["snakes"]:
         if snake["id"] == my_id:
             continue
-        head = snake["head"]
-        tail = snake["body"][-1]
-        potential_moves = [
-            (head["x"], head["y"] + 1),
-            (head["x"], head["y"] - 1),
-            (head["x"] - 1, head["y"]),
-            (head["x"] + 1, head["y"])
-        ] 
-        for move in potential_moves:
-            if move in data["board"]["food"]:
-                all_obstacles.update(tail)
-            danger_zone.add(move)
-    if possible_directions["left"] != -1:
-        if (my_head["x"] - 1, my_head["y"]) in danger_zone:
-            if snake["length"] >= data["you"]["length"]:
-                possible_directions["left"] -= 100
-            else:
-                possible_directions["left"] += 100
-    if possible_directions["right"] != -1:
-        if (my_head["x"] + 1, my_head["y"]) in danger_zone:
-            if snake["length"] >= data["you"]["length"]:
-                possible_directions["right"] -= 100
-            else:
-                possible_directions["right"] += 100
-    if possible_directions["down"] != -1:
-        if (my_head["x"], my_head["y"] - 1) in danger_zone:
-            if snake["length"] >= data["you"]["length"]:
-                possible_directions["down"] -= 100
-            else:
-                possible_directions["down"] += 100
-    if possible_directions["up"] != -1:
-        if (my_head["x"], my_head["y"] + 1) in danger_zone:
-            if snake["length"] >= data["you"]["length"]:
-                possible_directions["up"] -= 100
-            else:
-                possible_directions["up"] += 100
+            
+        opp_head = snake["head"]
+        opp_length = snake["length"]
+        
+        opp_moves = [
+            {"x": opp_head["x"], "y": opp_head["y"] + 1},
+            {"x": opp_head["x"], "y": opp_head["y"] - 1},
+            {"x": opp_head["x"] - 1, "y": opp_head["y"]},
+            {"x": opp_head["x"] + 1, "y": opp_head["y"]}
+        ]
+        
+        for move in opp_moves:
+            if possible_directions["left"] != -1:
+                if (my_head["x"] - 1) == move["x"] and my_head["y"] == move["y"]:
+                    if opp_length >= my_length:
+                        possible_directions["left"] -= 100
+                    else:
+                        possible_directions["left"] += 100
+
+            if possible_directions["right"] != -1:
+                if (my_head["x"] + 1) == move["x"] and my_head["y"] == move["y"]:
+                    if opp_length >= my_length:
+                        possible_directions["right"] -= 100
+                    else:
+                        possible_directions["right"] += 100
+            
+            if possible_directions["down"] != -1:
+                if my_head["x"] == move["x"] and (my_head["y"] - 1) == move["y"]:
+                    if opp_length >= my_length:
+                        possible_directions["down"] -= 100
+                    else:
+                        possible_directions["down"] += 100
+
+            if possible_directions["up"] != -1:
+                if my_head["x"] == move["x"] and (my_head["y"] + 1) == move["y"]:
+                    if opp_length >= my_length:
+                        possible_directions["up"] -= 100
+                    else:
+                        possible_directions["up"] += 100
 
     print(data["turn"])
     best_move = max(possible_directions, key=possible_directions.get)
@@ -186,5 +185,4 @@ def handle_move():
     return {"move": best_move}
 
 if __name__ == "__main__":
-    app.run(port=8080)
-
+    app.run(host="0.0.0.0", port=8000)
