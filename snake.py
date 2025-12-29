@@ -82,19 +82,20 @@ def handle_move():
         possible_directions["up"] += up_flood * flood_mult
 
     #incentive to follow tail
+    tail_incentive = 50
     my_tail = data["you"]["body"][-1]
     if possible_directions["left"] != -1:
         if my_head["x"] - 1 == my_tail["x"] and my_head["y"] == my_tail["y"]:
-            possible_directions["left"] += 25
+            possible_directions["left"] += tail_incentive
     if possible_directions["right"] != -1:
         if my_head["x"] + 1 == my_tail["x"] and my_head["y"] == my_tail["y"]:
-            possible_directions["right"] += 25
+            possible_directions["right"] += tail_incentive
     if possible_directions["down"] != -1:    
         if my_head["y"] - 1 == my_tail["y"] and my_head["x"] == my_tail["x"]:
-            possible_directions["down"] += 25
+            possible_directions["down"] += tail_incentive
     if possible_directions["up"] != -1:    
         if my_head["y"] + 1 == my_tail["y"] and my_head["x"] == my_tail["x"]:
-            possible_directions["up"] += 25
+            possible_directions["up"] += tail_incentive
 
     my_health = data["you"]["health"]
     if my_health < 10:
@@ -113,9 +114,9 @@ def handle_move():
     if turn < 40:
         turn_mult = 20
     elif turn < 100:
-        turn_mult = 10
+        turn_mult = 5
     else:
-        turn_mult = 2
+        turn_mult = 1
 
     #food checker
     closest_food = find_closest_food(my_head, data["board"]["food"])
