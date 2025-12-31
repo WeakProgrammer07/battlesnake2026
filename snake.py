@@ -1,5 +1,5 @@
 from flask import Flask, request
-from logic_files import get_flood_fill_score, find_closest_food
+from logic_files import get_flood_fill_score, a_star
 
 app = Flask(__name__)
 
@@ -118,20 +118,30 @@ def handle_move():
     else:
         turn_mult = 1
 
-    #food checker
-    closest_food = find_closest_food(my_head, data["board"]["food"])
-    if possible_directions["left"] != -1:
-        if closest_food["x"] < my_head["x"]:
-            possible_directions["left"] += 1 * low_health_mod * turn_mult
-    if possible_directions["right"] != -1:
-        if closest_food["x"] > my_head["x"]:
-            possible_directions["right"] += 1 * low_health_mod * turn_mult
-    if possible_directions["down"] != -1:
-        if closest_food["y"] < my_head["y"]:
-            possible_directions["down"] += 1 * low_health_mod * turn_mult
-    if possible_directions["up"] != -1:
-        if closest_food["y"] > my_head["y"]:
-            possible_directions["up"] += 1 * low_health_mod * turn_mult
+    # food checker using A*
+    food_list = data["board"]["food"]
+    best_path = []
+    shortest_path_len = 9999
+
+    for food in food_list:
+        path = a_star(my_head, food, board_width, board_height, all_obstacles)
+        
+        if path and len(path) < shortest_path_len:
+            shortest_path_len = len(path)
+            best_path = path
+
+    if best_path:
+        first_step = best_path[0] # This is (x, y)
+        food_reward = 1 * low_health_mod * turn_mult
+ 
+        if first_step[0] < my_head["x"]:
+            possible_directions["left"] += food_reward
+        elif first_step[0] > my_head["x"]:
+            possible_directions["right"] += food_reward
+        elif first_step[1] < my_head["y"]:
+            possible_directions["down"] += food_reward
+        elif first_step[1] > my_head["y"]:
+            possible_directions["up"] += food_reward
 
     #list of possible risky moves
     my_id = data["you"]["id"]
@@ -156,28 +166,28 @@ def handle_move():
                     if opp_length >= my_length:
                         possible_directions["left"] -= 100
                     else:
-                        possible_directions["left"] += 100
+                        possible_directions["left"] += 1000
 
             if possible_directions["right"] != -1:
                 if (my_head["x"] + 1) == move["x"] and my_head["y"] == move["y"]:
                     if opp_length >= my_length:
                         possible_directions["right"] -= 100
                     else:
-                        possible_directions["right"] += 100
+                        possible_directions["right"] += 1000
             
             if possible_directions["down"] != -1:
                 if my_head["x"] == move["x"] and (my_head["y"] - 1) == move["y"]:
                     if opp_length >= my_length:
                         possible_directions["down"] -= 100
                     else:
-                        possible_directions["down"] += 100
+                        possible_directions["down"] += 1000
 
             if possible_directions["up"] != -1:
                 if my_head["x"] == move["x"] and (my_head["y"] + 1) == move["y"]:
                     if opp_length >= my_length:
                         possible_directions["up"] -= 100
                     else:
-                        possible_directions["up"] += 100
+                        possible_directions["up"] += 1000
 
     print(data["turn"])
     best_move = max(possible_directions, key=possible_directions.get)

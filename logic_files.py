@@ -27,15 +27,49 @@ def get_flood_fill_score(start_node, board_width, board_height, obstacles):
 
     return count
 
-def find_closest_food(my_head, food_list):
-    closest_food = food_list[0]
-    min_distance = 9999 
+def a_star(start, goal, grid_width, grid_height, obstacles):
+    start_pos = (start["x"], start["y"])
+    goal_pos = (goal["x"], goal["y"])
+    
+    open_list = [(0, start_pos)]
+    
+    came_from = {}
+    g_score = {start_pos: 0}
 
-    for food in food_list:
-        dist = abs(my_head["x"] - food["x"]) + abs(my_head["y"] - food["y"])
+    obstacle_set = {(o["x"], o["y"]) for o in obstacles}
+
+    while open_list:
+        current_idx = 0
+        for i in range(len(open_list)):
+            if open_list[i][0] < open_list[current_idx][0]:
+                current_idx = i
         
-        if dist < min_distance:
-            min_distance = dist
-            closest_food = food
+        # Remove and get the current node
+        current_f, current = open_list.pop(current_idx)
 
-    return closest_food
+        # at goal?
+        if current == goal_pos:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            return path[::-1]
+
+        # neighbors
+        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            neighbor = (current[0] + dx, current[1] + dy)
+            if not (0 <= neighbor[0] < grid_width and 0 <= neighbor[1] < grid_height):
+                continue
+            if neighbor in obstacle_set:
+                continue
+            tentative_g_score = g_score[current] + 1
+            if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g_score
+                
+                h_score = abs(neighbor[0] - goal_pos[0]) + abs(neighbor[1] - goal_pos[1])
+                f_score = tentative_g_score + h_score
+                
+                open_list.append((f_score, neighbor))
+                
+    return [] # No path found
